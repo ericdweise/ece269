@@ -95,16 +95,16 @@ def run_part_d1():
     build_d1_plots(N, Ms, Ss, sigma)
 
     N = 50
-    Ms = [1,5,10,15,20]
-    Ss = [1,5,10,15,20,25,30,35,40,45,50]
+    Ms = range(1,17,3)
+    Ss = [1,2,3,4,5,10,15,20,25,35,50]
     sigma = 0.05
     build_d1_plots(N, Ms, Ss, sigma)
     sigma = 5
     build_d1_plots(N, Ms, Ss, sigma)
 
     N = 100
-    Ms = [1,5,10,15,20,25]
-    Ss = [1,10,20,30,40,50,60,70,80,90,100]
+    Ms = range(1,22,3)
+    Ss = [1,2,3,4,5,10,15,20,30,40,60,80,100]
     sigma = 0.05
     build_d1_plots(N, Ms, Ss, sigma)
     sigma = 5
