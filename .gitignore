@@ -11,6 +11,7 @@
 # Latex Compilation Files
 *.log
 *.aux
+*.out
 
 # Document Files
 *.pdf
