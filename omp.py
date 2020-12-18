@@ -76,16 +76,24 @@ class OmpSolver(object):
         self.max_sparsity = floor(1 / 2 / self.mu - 0.5)
 
 
-    def solve(self, signal, error_bound=10**(-3)):
+    def solve(self, signal, error_bound=10**(-3), stop_after_n=None):
         '''Find the OMP solution with index for the given signal.
 
         Args:
             signal: The "measured" signal
+            error_bound: OPTIONAL: If set OMP will stop when 
+                    ||Ax-b|| < error_bound
+            terminate_after_n: OPTIONAL: An integer number of steps 
+                    after which OMP will stop
         '''
         ## INITIALIZE
         residual = np.copy(signal)
         support_set = []  # Indices of atoms with maximum correlation to residual
         signal_estimate = np.zeros(self.dictionary.shape[0])
+
+        # Avoid singular matrices:
+        if stop_after_n is not None:
+            stop_after_n = min(stop_after_n, self.dictionary.shape[0])
 
         # MAIN LOOP
         for k in range(self.dictionary.shape[1]):
@@ -132,10 +140,12 @@ class OmpSolver(object):
             # update residual
             residual = signal - signal_estimate
 
-            # print_vec(signal_estimate)
+            # Check stop condition
+            if stop_after_n is not None:
+                if k+1 >= stop_after_n:
+                    break
 
-            # Check if solution is close enough to stop
-            if  error < error_bound:
+            elif np.linalg.norm(signal_estimate - signal) < error_bound:
                 break
 
         return signal_estimate, support_set, error
