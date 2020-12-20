@@ -80,6 +80,7 @@ def plot_esr(part, N, m_coords, s_coords, esr_val):
     ax.set_title(f'Probability of Exact Support Recovery\nDictionary length: N={N}')
     ax.view_init(azim=45)
     plt.savefig(f'./plots/part-{part}-N-{N}-esr.png')
+    plt.close()
 
 
 def plot_error(part, N, m_coords, s_coords, err_val):
@@ -92,4 +93,4 @@ def plot_error(part, N, m_coords, s_coords, err_val):
     ax.set_title(f'Normalized Error\nDictionary length: N={N}')
     ax.view_init(azim=45)
     plt.savefig(f'./plots/part-{part}-N-{N}-error.png')
-
+    plt.close()
