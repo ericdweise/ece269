@@ -18,88 +18,78 @@ import numpy as np
 
 from omp import OmpSolver
 from tools import signal_choices
-from tools import plot_error
-from tools import plot_esr
+from tools import save_data
 from tools import check_lists_equal
 from tools import generate_random_matrix
-from tools import generate_random_pure_signal
-from tools import generate_noise
-from omp import print_vec
+from tools import generate_pure_signal
+from tools import add_noise
+from tools import normalized_error
 
 
 
-def build_d1_plots(N, m_values, s_values, noise_var):
+def build_d1_plots(N, m_values, s_values, sigma):
 
     # Set up plotting variables
-    m_coords = np.outer(np.array(m_values), np.ones(len(s_values)))
-    m_coords = m_coords.astype('int16')
-    s_coords = np.outer(np.ones(len(m_values)), np.array(s_values))
-    s_coords = s_coords.astype('int16')
+    M = np.outer(np.array(m_values), np.ones(len(s_values)))
+    M = M.astype('int16')
+    S = np.outer(np.ones(len(m_values)), np.array(s_values))
+    S = S.astype('int16')
 
-    esr_val = np.zeros(s_coords.shape)
-    err_val = np.zeros(s_coords.shape)
+    ESR = np.zeros(S.shape)
+    ERR = np.zeros(S.shape)
 
     # Iterate over height of matrix
-    for i in range(m_coords.shape[0]):
-        M = m_coords[i,0]
+    for i in range(M.shape[0]):
+        m = M[i,0]
 
-        print(f'Created {M}x{N} matrix')
-        A = generate_random_matrix(M,N)
-        omp_solver = OmpSolver(A)
+        print(f'  Dictionary size: {m}x{N}')
+        A = generate_random_matrix(m,N)
+        omp_solver = OmpSolver(m, N)
 
-        for j in range(s_coords.shape[1]):
-            s = s_coords[0,j]
+        for j in range(S.shape[1]):
+            s = S[0,j]
 
-            print(f'    s={s}')
             # 2000 monte carlo experiments
             esr_count = 0
             error_tot = 0
             for exp_num in range(2000):
-                signal, index_set = generate_random_pure_signal(A,s)
-                noise = generate_noise(M, noise_var)
-                signal = signal + noise
-                error_bound = np.linalg.norm(noise)
-                recov_signal, support_set, error = omp_solver.solve(signal,
+                signal, index_set = generate_pure_signal(N, s)
+
+                y = omp_solver.compress(signal)
+                y_noisy, noise_norm = add_noise(y, sigma)
+
+                recov_signal, support_set = omp_solver.decompress(y_noisy,
                         stop_after_n=s)
 
                 if check_lists_equal(index_set, support_set):
                     esr_count += 1
 
-                error_tot += error
+                error_tot += normalized_error(signal, recov_signal)
 
-            esr_val[i,j] = float(esr_count) / 20    # in percent
-            err_val[i,j] = error_tot / 2000
+            ESR[i,j] = float(esr_count) / 20    # in percent
+            ERR[i,j] = error_tot / 2000
 
     # save data
-    np.save(f'./data/part-d1-N-{N}-sigma-{noise_var}-m-values', m_coords)
-    np.save(f'./data/part-d1-N-{N}-sigma-{noise_var}-s-values', s_coords)
-    np.save(f'./data/part-d1-N-{N}-sigma-{noise_var}-esr-values', esr_val)
-    np.save(f'./data/part-d1-N-{N}-sigma-{noise_var}-err-values', err_val)
-
-    # Plot Noiseless Phase Transition
-    plot_esr(f'd1', f'{N}-sigma-{noise_var}', m_coords, s_coords, esr_val)
-
-    # Plot Error values
-    plot_error(f'd1', f'{N}-sigma-{noise_var}', m_coords, s_coords, err_val)
+    save_data(M, S, ERR, ESR, 'd1', N, sigma)
 
 
 def run_part_d1():
     '''Perform the noisy experiments detailed in part d 1
     '''
-    N = 20
-    Ms = range(1,11)
-    Ss = range(1,21)
-    sigma = 0.05
-    build_d1_plots(N, Ms, Ss, sigma)
-    sigma = 5
-    build_d1_plots(N, Ms, Ss, sigma)
+    # N = 20
+    # Ms = range(1,11)
+    # Ss = range(1,21)
+    # sigma = 0.05
+    # build_d1_plots(N, Ms, Ss, sigma)
+    # sigma = 1
+    # build_d1_plots(N, Ms, Ss, sigma)
 
     N = 50
     Ms = range(1,17,3)
     Ss = [1,2,3,4,5,10,15,20,25,35,50]
     sigma = 0.05
     build_d1_plots(N, Ms, Ss, sigma)
-    sigma = 5
+    sigma = 1
     build_d1_plots(N, Ms, Ss, sigma)
 
     N = 100
@@ -107,5 +97,5 @@ def run_part_d1():
     Ss = [1,2,3,4,5,10,15,20,30,40,60,80,100]
     sigma = 0.05
     build_d1_plots(N, Ms, Ss, sigma)
-    sigma = 5
+    sigma = 1
     build_d1_plots(N, Ms, Ss, sigma)
