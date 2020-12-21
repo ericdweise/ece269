@@ -19,7 +19,7 @@ import os
 from part_c import run_part_c
 from part_d1 import run_part_d1
 from part_d2 import run_part_d2
-from part_d3 import run_part_d3
+# from part_d3 import run_part_d3
 
 
 
@@ -31,16 +31,19 @@ def main():
     if not os.path.isdir('./data'):
         os.mkdir('./data')
 
-    print('*** Part C ***')
-    run_part_c()
+    if not os.path.isdir('./images'):
+        os.mkdir('./images')
 
-    print('*** Part D 1 ***')
-    run_part_d1()
+    # print('*** Part C ***')
+    # run_part_c()
+
+    # print('*** Part D 1 ***')
+    # run_part_d1()
 
     print('*** Part D 2 ***')
     run_part_d2()
 
-    print('*** Part D 3 ***')
+    # print('*** Part D 3 ***')
     # run_part_d3()
 
 
