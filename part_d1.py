@@ -76,13 +76,13 @@ def build_d1_plots(N, m_values, s_values, sigma):
 def run_part_d1():
     '''Perform the noisy experiments detailed in part d 1
     '''
-    # N = 20
-    # Ms = range(1,11)
-    # Ss = range(1,21)
-    # sigma = 0.05
-    # build_d1_plots(N, Ms, Ss, sigma)
-    # sigma = 1
-    # build_d1_plots(N, Ms, Ss, sigma)
+    N = 20
+    Ms = range(1,11)
+    Ss = range(1,21)
+    sigma = 0.05
+    build_d1_plots(N, Ms, Ss, sigma)
+    sigma = 1
+    build_d1_plots(N, Ms, Ss, sigma)
 
     N = 50
     Ms = range(1,17,3)

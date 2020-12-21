@@ -79,15 +79,15 @@ def run_part_c():
     S = range(1,21)
     build_c_plots(N, M, S)
 
-    # N = 50
-    # M = range(1,17,3)
-    # S = [1,2,3,4,5,10,15,20,25,35,50]
-    # build_c_plots(N, M, S)
+    N = 50
+    M = range(1,17,3)
+    S = [1,2,3,4,5,10,15,20,25,35,50]
+    build_c_plots(N, M, S)
 
-    # N = 100
-    # M = range(1,22,3)
-    # S = [1,2,3,4,5,10,15,20,30,40,60,80,100]
-    # build_c_plots(N, M, S)
+    N = 100
+    M = range(1,22,3)
+    S = [1,2,3,4,5,10,15,20,30,40,60,80,100]
+    build_c_plots(N, M, S)
 
 
 if __name__ == '__main__':
