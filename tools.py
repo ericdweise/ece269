@@ -17,6 +17,8 @@ Write by Eric D. Weise (ericdweise@gmail.com)
 import matplotlib.pyplot as plt 
 import numpy as np
 
+from math import log
+
 
 signal_choices = [-10,-9,-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8,9,10]
 
@@ -143,52 +145,74 @@ def save_data(M, S, ERR, ESR, part, N, sigma=None):
     plt.close()
 
 
-def plot_from_data():
+def omp(A, y, error_bound=0.01, stop_after=float('inf')):
+    '''Find the OMP solution with index for the given signal.
 
-    # part c
-    stub = 'data/part-c-N-100-'
-    helper('c', 100, f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
+    Args:
+        signal: The "measured" signal
+        error_bound: OPTIONAL: If set OMP will stop when 
+                ||Ax-b|| < error_bound
+        stop_after_n: OPTIONAL: An integer number of steps 
+                after which OMP will stop
 
-    stub = 'data/part-c-N-20-'
-    helper('c', 20, f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
+    Returns:
+        x: a 1xN sparse vector
+        support set: a list of the indices used
+    '''
+    M = A.shape[0]
+    N = A.shape[1]
+    residual = np.copy(y)
+    support_set = []
+    x_hat = np.zeros(N)
 
-    stub = 'data/part-c-N-50-'
-    helper('c', 50, f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
+    # MAIN LOOP
+    count = 0
+    while count < stop_after and np.linalg.norm(residual) > error_bound:
+        count += 1
 
-    # part d1
-    stub = 'data/part-d1-N-100-sigma-0.05-'
-    helper('d1', '100-sigma-0.05', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d1-N-100-sigma-5-'
-    helper('d1', '100-sigma-5', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d1-N-20-sigma-0.05-'
-    helper('d1', '20-sigma-0.05', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d1-N-20-sigma-5-'
-    helper('d1', '20-sigma-5', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d1-N-50-sigma-0.05-'
-    helper('d1', '50-sigma-0.05', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d1-N-50-sigma-5-'
-    helper('d1', '50-sigma-5', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    # part d2
-    stub = 'data/part-d2-N-100-sigma-0.05-'
-    helper('d2', '100-sigma-0.05', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d2-N-100-sigma-5-'
-    helper('d2', '100-sigma-5', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d2-N-20-sigma-0.05-'
-    helper('d2', '20-sigma-0.05', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d2-N-20-sigma-5-'
-    helper('d2', '20-sigma-5', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d2-N-50-sigma-0.05-'
-    helper('d2', '50-sigma-0.05', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
-    
-    stub = 'data/part-d2-N-50-sigma-5-'
-    helper('d2', '50-sigma-5', f'{stub}m-values.npy', f'{stub}s-values.npy', f'{stub}ERR-values.npy', f'{stub}ESR-values.npy')
+        # Find index of atom with largest correlation to residual
+        correlations = np.dot(np.transpose(A), residual)
+        index = np.argmax(abs(correlations))
+        support_set.append(index)
+
+        # Create matrix with only support set atoms 
+        Asub = A[:, support_set]
+
+        # least squares to find reconstructed signal, x-hat
+        #    x_hat = (Al^T * Al)^(-1) * Al^T * y
+        # where: Al is the tall submatrix containing only the atoms selected so far
+        x_hat[support_set] = np.linalg.inv(np.dot(Asub.T, Asub)).dot(Asub.T).dot(y)
+
+        # Update residual: r(k) = y - A(k) * x_hat
+        residual = y - np.dot(A, x_hat)
+
+    return x_hat, support_set
+
+
+def mean_squared_error(img1, img2):
+    '''Calculate the Mean Signal to Noise Ratio of two images.
+    Images must have the same shape'''
+    assert(img1.shape[0] == img2.shape[0])
+    assert(img1.shape[1] == img2.shape[1])
+
+    mse = 0
+
+    for i in range(img1.shape[0]):
+        for j in range(img2.shape[1]):
+            mse += (float(img1[i,j]) - float(img2[i,j]))**2
+
+    mse /= img1.shape[0] 
+    mse /= img1.shape[1]
+
+    return mse
+
+
+def peak_snr(img1, img2):
+    '''Calculate the Mean Signal to Noise Ratio of two images.
+    Images must have the same shape'''
+    assert(img1.shape[0] == img2.shape[0])
+    assert(img1.shape[1] == img2.shape[1])
+
+    mse = mean_squared_error(img1, img2)
+
+    return 20 * log(255) - 10 * log(mse)

@@ -16,7 +16,7 @@ Write by Eric D. Weise (ericdweise@gmail.com)
 
 import numpy as np
 
-from omp import OmpSolver
+from tools import omp
 from tools import signal_choices
 from tools import save_data
 from tools import check_lists_equal
@@ -44,7 +44,6 @@ def build_d1_plots(N, m_values, s_values, sigma):
 
         print(f'  Dictionary size: {m}x{N}')
         A = generate_random_matrix(m,N)
-        omp_solver = OmpSolver(m, N)
 
         for j in range(S.shape[1]):
             s = S[0,j]
@@ -55,11 +54,11 @@ def build_d1_plots(N, m_values, s_values, sigma):
             for exp_num in range(2000):
                 signal, index_set = generate_pure_signal(N, s)
 
-                y = omp_solver.compress(signal)
+                y = np.dot(A, signal)
                 y_noisy, noise_norm = add_noise(y, sigma)
 
-                recov_signal, support_set = omp_solver.decompress(y_noisy,
-                        stop_after_n=s)
+                recov_signal, support_set = omp(A, y_noisy,
+                        stop_after=s)
 
                 if check_lists_equal(index_set, support_set):
                     esr_count += 1
@@ -99,3 +98,7 @@ def run_part_d1():
     build_d1_plots(N, Ms, Ss, sigma)
     sigma = 1
     build_d1_plots(N, Ms, Ss, sigma)
+
+
+if __name__ == '__main__':
+    run_part_d1()

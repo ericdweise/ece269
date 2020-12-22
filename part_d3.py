@@ -15,28 +15,47 @@ Write by Eric D. Weise (ericdweise@gmail.com)
 
 
 from PIL import Image
-from math import floor
 from scipy.fftpack import dct
 from scipy.fftpack import idct
-from math import floor
 
 import numpy as np
-import pywt
+import matplotlib.pyplot as plt 
 
-from omp import OmpSolver
+from tools import add_noise
+from tools import omp
+from tools import generate_random_matrix
+from tools import mean_squared_error
+from tools import peak_snr
 
 
+
+zzOrd = {  0: (0,0),   1: (0,1),   5: (0,2),   6: (0,3),  14: (0,4),  15: (0,5),  27: (0,6),  28: (0,7),
+           2: (1,0),   4: (1,1),   7: (1,2),  13: (1,3),  16: (1,4),  26: (1,5),  29: (1,6),  42: (1,7),
+           3: (2,0),   8: (2,1),  12: (2,2),  17: (2,3),  25: (2,4),  30: (2,5),  41: (2,6),  43: (2,7),
+           9: (3,0),  11: (3,1),  18: (3,2),  24: (3,3),  31: (3,4),  40: (3,5),  44: (3,6),  53: (3,7),
+          10: (4,0),  19: (4,1),  23: (4,2),  32: (4,3),  39: (4,4),  45: (4,5),  52: (4,6),  54: (4,7),
+          20: (5,0),  22: (5,1),  33: (5,2),  38: (5,3),  46: (5,4),  51: (5,5),  55: (5,6),  60: (5,7),
+          21: (6,0),  34: (6,1),  37: (6,2),  47: (6,3),  50: (6,4),  56: (6,5),  59: (6,6),  61: (6,7),
+          35: (7,0),  36: (7,1),  48: (7,2),  49: (7,3),  57: (7,4),  58: (7,5),  62: (7,6),  63: (7,7) }
 
 
 def to_fourier(arr):
     '''
-    Convert 8x8 array in image space to 1x8 array in dct space
+    Convert 8x8 array in image space to 1x64 array in dct space
+
+    The ZigZag ordering of DCT coefficients is used to preference 
+    low frequency signals
     '''
     assert(arr.shape == (8,8))
     coeffs = dct(arr)
-    coeffs = np.reshape(coeffs, (64,))
     coeffs = coeffs / 16
-    return coeffs
+
+    # Apply zig-zag ordering
+    coeffs2 = np.zeros(64)
+    for k in range(64):
+        coeffs2[k] = coeffs[zzOrd[k][0], zzOrd[k][1]]
+
+    return coeffs2
 
 
 def inverse_fourier(coeffs):
@@ -44,29 +63,33 @@ def inverse_fourier(coeffs):
     Convert 1x64 array in dct basis to 8x8 array in image space.
     '''
     assert(coeffs.shape == (64,))
-    coeffs = np.reshape(coeffs, (8,8))
-    return idct(coeffs)
+    coeffs2 = np.zeros((8,8))
+
+    for k in range(64):
+        coeffs2[zzOrd[k][0], zzOrd[k][1]] = coeffs[k]
+    return idct(coeffs2)
 
 
 def img_to_dct(img):
     '''convert image into dct space.
     
-    The output is an array that has 64 rows and m*n/64 columnss'''
-    dct_img = np.zeros((64, int(img.shape[0]*img.shape[1]/64)))
+    The output is an array that has 64 rows and m*n/64 columns
+    '''
+    dct_arr = np.zeros((64, int(img.shape[0]*img.shape[1]/64)))
     J = 0
     for i in range(0, img.shape[0]-7, 8):
         for j in range(0, img.shape[1]-7, 8):
             row = to_fourier(img[np.ix_(range(i,i+8),range(j,j+8))])
-            dct_img[:, J] = row
+            dct_arr[:, J] = row
             J += 1
 
-    return dct_img
+    return dct_arr
 
 
 def dct_to_img(img_dct, shape):
     '''Convert a 64xN matrix into a matrix with dimensions in tuple shape
     ''' 
-    assert(img_dct.shape[0]*img_dct.shape[1] == shape[0]*shape[1])
+    # assert(img_dct.shape[0]*img_dct.shape[1] == shape[0]*shape[1])
 
     img = np.zeros(shape)
 
@@ -84,104 +107,90 @@ def dct_to_img(img_dct, shape):
     return img
 
 
-
 def load_image(filepath):
 
     # Open image file
     img = Image.open(filepath)
-
-    numpydata = np.asarray(img)
+    arr = np.asarray(img)
 
     # Convert RGB to greyscale
-    if len(numpydata.shape) == 3:
-        numpydata = numpydata[:,:,0]
+    if len(arr.shape) == 3:
+        arr = arr[:,:,0]
 
-    # convert image file to 1D array
-    imshape = numpydata.shape
-    img_array = np.reshape(numpydata, imshape[0]*imshape[1])
-
-    return img_array, imshape
+    return arr
 
 
-def save_image(array, shape, path):
-    array2d = np.reshape(array, shape)
-    image = Image.fromarray(array2d)
+def save_image(array, path):
+    image = Image.fromarray(array)
     image = image.convert('RGB')
     image.save(path)
 
 
-def omb_image(img_array, M):
-    N = img_array.shape[0]
-    omp_solver = OmpSolver(M, N)
-    print('            dictionary made')
-
-    compressed_image = np.dot(omp_solver.dictionary, img_array)
-    print('            sparse image made')
-
-    reconstructed_image, index_set = omp_solver.decompress(compressed_image)
-    print('            reconstructed image made')
-
-    return reconstructed_image
-
-
-def helper(filepath):
+def run_image(filepath, noise=None):
     print(f'Reconstucting image {filepath}')
 
-    img = Image.open(filepath)
-    arr = np.asarray(img)
-    if len(arr.shape) == 3:
-        arr = arr[:,:,0]
+    image_name = filepath.replace('images/', '')
+    image_name = image_name.replace('.png', '')
+    if noise is not None:
+        image_name = image_name + '_noisy'
 
-    img_arr = img_to_dct(arr) # 64 rows
+    image_array = load_image(filepath)
 
-    N = img_arr.shape[1]
-    M = 100
-    print(f'  matrix: {M}x{N}')
+    dct_array = img_to_dct(image_array)
 
-    osolver = OmpSolver(64, img_arr.shape[1])
-    recov_dct = np.zeros(img_arr.shape)
+    N = 64
+    Ms = range(2,64,4)
 
-    for k in range(img_arr.shape[0]):
-        y = osolver.compress(img_arr[k,:])
-        x_recov, _ = osolver.decompress(y)
-        recov_dct[k,:] = x_recov
+    mse = []
+    psnr = []
 
-    recov_array = dct_to_img(recov_dct, img_arr.shape)
-    image2 = Image.fromarray(recov_array)
-    image2 = image2.convert('RGB')
-    image2.save(filepath.replace('.png', f'-recovered_{M}_{N}.png'))
+    for M in Ms:
+        A = generate_random_matrix(M,N)
+        dct_recov = np.zeros(dct_array.shape)
 
+        for i in range(dct_array.shape[1]):
+            x = dct_array[:,i]
+            y = np.dot(A, x)
 
-def helper2(filepath):
-    print(f'Reconstucting image {filepath}')
-    img = Image.open(filepath)
-    img_arr = np.asarray(img)
-    if len(img_arr.shape) == 3:
-        img_arr = img_arr[:,:,0]
+            if noise is not None:
+                y, _ = add_noise(y, noise)
 
-    N = img_arr.shape[0]
+            x_recovered, _ = omp(A, y, M)
 
-    maxM = img_arr.shape[1]
-    minM = floor(0.75*maxM)
-    print(f'  minimum M: {minM}')
+            dct_recov[:,i] = x_recovered
 
-    for M in range(maxM-10, minM, -10):
-        print(f'    M: {M}')
-        img_recov = np.zeros(img_arr.shape)
-        omp_solver = OmpSolver(M, N)
+        image_recovered = dct_to_img(dct_recov, image_array.shape)
 
-        # Iterate over columns
-        for k in range(img_arr.shape[1]):
-            x = img_arr[:,k]
-            y = omp_solver.compress(x)
+        save_image(image_recovered, f'images/{image_name}' + f'-recovered_{M}.png')
 
-            x_recov, _ = omp_solver.decompress(y)
+        # Convert from float64 to uit8
+        image_recovered = image_recovered / image_recovered.max()
+        image_recovered = image_recovered * 255
+        image_recovered = image_recovered.astype('uint8')
 
-            img_recov[:,k] = x_recov
+        mse.append(mean_squared_error(image_array, image_recovered))
+        psnr.append(peak_snr(image_array, image_recovered))
 
-        img2 = Image.fromarray(img_recov)
-        image2 = img2.convert('RGB')
-        image2.save(image2, filepath.replace('.png', f'-recovered-{M}.png'))
+    fig = plt.figure()
+
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax1.set_title('Mean Squared Error')
+    ax1.set_ylabel('MSE')
+    ax1.set_xlabel('Number of Measurements, M')
+    ax1.plot(Ms, mse, '-m')
+
+    ax2 = fig.add_subplot(1, 2, 2)
+    ax2.set_title('Peak Signal to Noise Ratio')
+    ax2.set_ylabel('PSNR (db)')
+    ax2.set_xlabel('Number of Measurements, M')
+    ax2.plot(Ms, psnr, '-c')
+
+    ax2.yaxis.set_label_position("right")
+    ax2.yaxis.tick_right()
+
+    plt.savefig(f'./plots/d3-{image_name}.png')
+
+    plt.close()
 
 
 def test():
@@ -233,11 +242,19 @@ def test():
 
 
 def run_part_d3():
-    # helper2('images/arch.png')
-    # helper2('images/elephant.png')
-    # helper2('images/koala.png')
-    helper('images/spiral.png')
+    run_image('images/arch.png')
+    run_image('images/elephant.png')
+    run_image('images/koala.png')
+    run_image('images/spiral.png')
+
+    # And with noise:
+    # Adding a noise with variance of 10 (out of 255) is about 2.5%
+    run_image('images/arch.png', 10)
+    run_image('images/elephant.png', 10)
+    run_image('images/koala.png', 10)
+    run_image('images/spiral.png', 10)
+
 
 if __name__ == '__main__':
-    # run_part_d3()
     test()
+    run_part_d3()

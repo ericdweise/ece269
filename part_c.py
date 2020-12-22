@@ -17,7 +17,7 @@ Write by Eric D. Weise (ericdweise@gmail.com)
 import matplotlib.pyplot as plt 
 import numpy as np
 
-from omp import OmpSolver
+from tools import omp
 from tools import signal_choices
 from tools import save_data
 from tools import check_lists_equal
@@ -45,7 +45,6 @@ def build_c_plots(N, m_values, s_values):
 
         print(f'  Dictionary size: {m}x{N}')
         A = generate_random_matrix(m,N)
-        omp_solver = OmpSolver(m, N)
 
         for j in range(S.shape[1]):
             s = S[0,j]
@@ -55,9 +54,9 @@ def build_c_plots(N, m_values, s_values):
             error_tot = 0
             for experiment in range(2000):
                 signal, index_set = generate_pure_signal(N, s)
-                y = omp_solver.compress(signal)
+                y = np.dot(A, signal)
 
-                recov_signal, support_set = omp_solver.decompress(y)
+                recov_signal, support_set = omp(A, y)
 
                 if check_lists_equal(index_set, support_set):
                     esr_count += 1
