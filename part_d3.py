@@ -16,10 +16,72 @@ Write by Eric D. Weise (ericdweise@gmail.com)
 
 from PIL import Image
 from math import floor
+from scipy.fftpack import dct
+from scipy.fftpack import idct
+from math import floor
+
 import numpy as np
 import pywt
 
 from omp import OmpSolver
+
+
+
+
+def to_fourier(arr):
+    '''
+    Convert 8x8 array in image space to 1x8 array in dct space
+    '''
+    assert(arr.shape == (8,8))
+    coeffs = dct(arr)
+    coeffs = np.reshape(coeffs, (64,))
+    coeffs = coeffs / 16
+    return coeffs
+
+
+def inverse_fourier(coeffs):
+    '''
+    Convert 1x64 array in dct basis to 8x8 array in image space.
+    '''
+    assert(coeffs.shape == (64,))
+    coeffs = np.reshape(coeffs, (8,8))
+    return idct(coeffs)
+
+
+def img_to_dct(img):
+    '''convert image into dct space.
+    
+    The output is an array that has 64 rows and m*n/64 columnss'''
+    dct_img = np.zeros((64, int(img.shape[0]*img.shape[1]/64)))
+    J = 0
+    for i in range(0, img.shape[0]-7, 8):
+        for j in range(0, img.shape[1]-7, 8):
+            row = to_fourier(img[np.ix_(range(i,i+8),range(j,j+8))])
+            dct_img[:, J] = row
+            J += 1
+
+    return dct_img
+
+
+def dct_to_img(img_dct, shape):
+    '''Convert a 64xN matrix into a matrix with dimensions in tuple shape
+    ''' 
+    assert(img_dct.shape[0]*img_dct.shape[1] == shape[0]*shape[1])
+
+    img = np.zeros(shape)
+
+    J = 0
+    for top in range(0, shape[0]-7, 8):
+        for left in range(0, shape[1]-7, 8):
+            im_8x8 = inverse_fourier(img_dct[:,J])
+
+            for i in range(8):
+                for j in range(8):
+                    img[top + i, left + j] = im_8x8[i,j]
+
+            J += 1
+
+    return img
 
 
 
@@ -62,18 +124,32 @@ def omb_image(img_array, M):
     return reconstructed_image
 
 
-def helper(in_path):
-    print(f'Reconstucting image {in_path}')
-    image_array, image_shape = load_image(in_path)
+def helper(filepath):
+    print(f'Reconstucting image {filepath}')
 
-    N = image_array.shape[0]
+    img = Image.open(filepath)
+    arr = np.asarray(img)
+    if len(arr.shape) == 3:
+        arr = arr[:,:,0]
 
-    # for M in range(1, int(N/10), 5):
-    for M in [196,]:
-        print(f'   Dictionary size: {M}x{N}')
-        out_path = in_path.replace('.png', f'-reconstructed-M-{M}.png')
-        reconstructed_image = omb_image(image_array, M)
-        save_image(reconstructed_image, image_shape, out_path)
+    img_arr = img_to_dct(arr) # 64 rows
+
+    N = img_arr.shape[1]
+    M = 100
+    print(f'  matrix: {M}x{N}')
+
+    osolver = OmpSolver(64, img_arr.shape[1])
+    recov_dct = np.zeros(img_arr.shape)
+
+    for k in range(img_arr.shape[0]):
+        y = osolver.compress(img_arr[k,:])
+        x_recov, _ = osolver.decompress(y)
+        recov_dct[k,:] = x_recov
+
+    recov_array = dct_to_img(recov_dct, img_arr.shape)
+    image2 = Image.fromarray(recov_array)
+    image2 = image2.convert('RGB')
+    image2.save(filepath.replace('.png', f'-recovered_{M}_{N}.png'))
 
 
 def helper2(filepath):
@@ -104,26 +180,64 @@ def helper2(filepath):
             img_recov[:,k] = x_recov
 
         img2 = Image.fromarray(img_recov)
-        ima2 = img2.convert('RGB')
-        ima2.save(filepath.replace('.png', f'-recovered-{M}.png'))
+        image2 = img2.convert('RGB')
+        image2.save(image2, filepath.replace('.png', f'-recovered-{M}.png'))
 
 
 def test():
-    im_shape = (3,4)
-    orig = np.ones(im_shape)
-    orig_arr = np.reshape(orig, (12,))
-    im_array = np.reshape(orig_arr, im_shape[0]*im_shape[1])
-    im_recon = omb_image(im_array, 8)
-    im_recon_2d = np.reshape(im_recon, im_shape)
-    print(orig)
-    print(im_recon_2d)
+
+    # Test 
+    x1 = np.ones((8,8))
+    w = to_fourier(x1)
+    y = inverse_fourier(w)
+    print(x1)
+    print(y)
+    assert(np.array_equal(x1, y))
+
+    print('-'*50)
+
+    x2 = np.zeros((8,8))
+    for i in range(8):
+        for j in range(8):
+            x2[i,j] = i+j
+    w = to_fourier(x2)
+    y = inverse_fourier(w)
+    print(x2)
+    print(y)
+    assert(np.allclose(x2, y))
+
+    print('-'*50)
+
+    # Test converting images to and from fourier space
+    A = np.zeros((16,16))
+
+    for I in range(16):
+        for J in range(16):
+            if I > 7:
+                i = I-8
+            else:
+                i = I
+            if J > 7:
+                 j = J-8
+            else:
+                j = J
+            if (I<8) & (J>8):
+                A[I,J] = x2[i,j]
+            else:
+                A[I,J] = x1[i,j]
+    Adct = img_to_dct(A)
+    Arecov = dct_to_img(Adct, A.shape)
+    print(A)
+    print(Arecov)
+    assert(np.allclose(A, Arecov))
 
 
 def run_part_d3():
-    helper2('images/arch.png')
-    helper2('images/elephant.png')
-    helper2('images/koala.png')
-    helper2('images/spiral.png')
+    # helper2('images/arch.png')
+    # helper2('images/elephant.png')
+    # helper2('images/koala.png')
+    helper('images/spiral.png')
 
 if __name__ == '__main__':
-    run_part_d3()
+    # run_part_d3()
+    test()
