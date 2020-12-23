@@ -77,7 +77,7 @@ def generate_pure_signal(N, s):
 
 
 def add_noise(vector, variance):
-    noise = np.random.normal(0, variance, vector.shape[0])
+    noise = np.random.normal(0, variance, vector.shape)
     noise_norm = np.linalg.norm(noise)
 
     return vector + noise, noise_norm
@@ -195,11 +195,11 @@ def mean_squared_error(img1, img2):
     assert(img1.shape[0] == img2.shape[0])
     assert(img1.shape[1] == img2.shape[1])
 
-    mse = 0
+    mse = 0.
 
     for i in range(img1.shape[0]):
         for j in range(img2.shape[1]):
-            mse += (float(img1[i,j]) - float(img2[i,j]))**2
+            mse += (img1[i,j] - img2[i,j])**2
 
     mse /= img1.shape[0] 
     mse /= img1.shape[1]

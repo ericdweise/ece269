@@ -39,7 +39,15 @@ zzOrd = {  0: (0,0),   1: (0,1),   5: (0,2),   6: (0,3),  14: (0,4),  15: (0,5),
           35: (7,0),  36: (7,1),  48: (7,2),  49: (7,3),  57: (7,4),  58: (7,5),  62: (7,6),  63: (7,7) }
 
 
-def to_fourier(arr):
+def dct2(block):
+    return dct(dct(block.T, norm='ortho').T, norm='ortho')
+
+
+def idct2(block):
+    return idct(idct(block.T, norm='ortho').T, norm='ortho')
+
+
+def to_dct(arr):
     '''
     Convert 8x8 array in image space to 1x64 array in dct space
 
@@ -47,8 +55,7 @@ def to_fourier(arr):
     low frequency signals
     '''
     assert(arr.shape == (8,8))
-    coeffs = dct(arr)
-    coeffs = coeffs / 16
+    coeffs = dct2(arr)
 
     # Apply zig-zag ordering
     coeffs2 = np.zeros(64)
@@ -58,7 +65,7 @@ def to_fourier(arr):
     return coeffs2
 
 
-def inverse_fourier(coeffs):
+def from_dct(coeffs):
     '''
     Convert 1x64 array in dct basis to 8x8 array in image space.
     '''
@@ -67,45 +74,17 @@ def inverse_fourier(coeffs):
 
     for k in range(64):
         coeffs2[zzOrd[k][0], zzOrd[k][1]] = coeffs[k]
-    return idct(coeffs2)
+    return idct2(coeffs2)
 
 
-def img_to_dct(img):
-    '''convert image into dct space.
-    
-    The output is an array that has 64 rows and m*n/64 columns
-    '''
-    dct_arr = np.zeros((64, int(img.shape[0]*img.shape[1]/64)))
-    J = 0
-    for i in range(0, img.shape[0]-7, 8):
-        for j in range(0, img.shape[1]-7, 8):
-            row = to_fourier(img[np.ix_(range(i,i+8),range(j,j+8))])
-            dct_arr[:, J] = row
-            J += 1
-
-    return dct_arr
-
-
-def dct_to_img(img_dct, shape):
-    '''Convert a 64xN matrix into a matrix with dimensions in tuple shape
-    ''' 
-    # assert(img_dct.shape[0]*img_dct.shape[1] == shape[0]*shape[1])
-
-    img = np.zeros(shape)
-
-    J = 0
-    for top in range(0, shape[0]-7, 8):
-        for left in range(0, shape[1]-7, 8):
-            im_8x8 = inverse_fourier(img_dct[:,J])
-
-            for i in range(8):
-                for j in range(8):
-                    img[top + i, left + j] = im_8x8[i,j]
-
-            J += 1
-
-    return img
-
+def showstuff():
+	for i in range(8):
+		for j in range(8):
+			a = np.zeros((8,8))
+			a[i,j] = 1
+			print(a)
+			print(idct2(a))
+			f = input('pause')
 
 def load_image(filepath):
 
@@ -126,82 +105,90 @@ def save_image(array, path):
     image.save(path)
 
 
+def make_sparse(x, s):
+    y = np.sort(x)
+    z = np.array([x[i] if x[i] >= y[-s] else 0 for i in range(x.shape[0])])
+    return z
+
+
 def run_image(filepath, noise=None):
     print(f'Reconstucting image {filepath}')
 
-    image_name = filepath.replace('images/', '')
-    image_name = image_name.replace('.png', '')
+    label = filepath.replace('images/', '')
+    label = label.replace('.png', '')
+
+    image = load_image(filepath)
+
     if noise is not None:
-        image_name = image_name + '_noisy'
-
-    image_array = load_image(filepath)
-
-    dct_array = img_to_dct(image_array)
+        label = label + f'_noise-{noise}'
+        image, _ = add_noise(image, noise)
+        save_image(image, 'images/' + label + '.png')
 
     N = 64
-    Ms = range(2,64,4)
+    M = 30
+    Ss = range(1,16)
+
+    A = generate_random_matrix(M,N)
 
     mse = []
     psnr = []
 
-    for M in Ms:
-        A = generate_random_matrix(M,N)
-        dct_recov = np.zeros(dct_array.shape)
+    for s in Ss:
+        img_recov = np.zeros(image.shape)
 
-        for i in range(dct_array.shape[1]):
-            x = dct_array[:,i]
-            y = np.dot(A, x)
+        for I in range(0, image.shape[0]-7, 8):
+            for J in range(0, image.shape[1]-7, 8):
+                subimage = image[I:I+8, J:J+8]
 
-            if noise is not None:
-                y, _ = add_noise(y, noise)
+                x = to_dct(subimage)
+                xs = make_sparse(x, s)
+                y = np.dot(A, xs)
 
-            x_recovered, _ = omp(A, y, M)
+                x_recovered, _ = omp(A, y, error_bound=0.001)
 
-            dct_recov[:,i] = x_recovered
+                img_recov[I:I+8, J:J+8] = from_dct(x_recovered)
 
-        image_recovered = dct_to_img(dct_recov, image_array.shape)
-
-        save_image(image_recovered, f'images/{image_name}' + f'-recovered_{M}.png')
+        save_image(img_recov, f'images/{label}' + f'-recovered_{s:02d}.png')
 
         # Convert from float64 to uit8
-        image_recovered = image_recovered / image_recovered.max()
-        image_recovered = image_recovered * 255
-        image_recovered = image_recovered.astype('uint8')
+        img_recov = img_recov / img_recov.max()
+        img_recov = img_recov * 255
+        img_recov = img_recov.astype('uint8')
 
-        mse.append(mean_squared_error(image_array, image_recovered))
-        psnr.append(peak_snr(image_array, image_recovered))
+        mse.append(mean_squared_error(image, img_recov))
+        psnr.append(peak_snr(image, img_recov))
 
     fig = plt.figure()
 
     ax1 = fig.add_subplot(1, 2, 1)
     ax1.set_title('Mean Squared Error')
     ax1.set_ylabel('MSE')
-    ax1.set_xlabel('Number of Measurements, M')
-    ax1.plot(Ms, mse, '-m')
+    ax1.set_xlabel('Number of Measurements, s')
+    ax1.plot(Ss, mse, '-m')
 
     ax2 = fig.add_subplot(1, 2, 2)
     ax2.set_title('Peak Signal to Noise Ratio')
     ax2.set_ylabel('PSNR (db)')
-    ax2.set_xlabel('Number of Measurements, M')
-    ax2.plot(Ms, psnr, '-c')
+    ax2.set_xlabel('Number of Measurements, s')
+    ax2.plot(Ss, psnr, '-c')
 
     ax2.yaxis.set_label_position("right")
     ax2.yaxis.tick_right()
 
-    plt.savefig(f'./plots/d3-{image_name}.png')
+    plt.savefig(f'./plots/d3-{label}.png')
 
     plt.close()
 
 
 def test():
 
-    # Test 
+    # Test transformations to/from Fourier space
     x1 = np.ones((8,8))
-    w = to_fourier(x1)
-    y = inverse_fourier(w)
+    w = to_dct(x1)
+    y = from_dct(w)
     print(x1)
     print(y)
-    assert(np.array_equal(x1, y))
+    assert(np.allclose(x1, y))
 
     print('-'*50)
 
@@ -209,36 +196,13 @@ def test():
     for i in range(8):
         for j in range(8):
             x2[i,j] = i+j
-    w = to_fourier(x2)
-    y = inverse_fourier(w)
+    w = to_dct(x2)
+    y = from_dct(w)
     print(x2)
     print(y)
     assert(np.allclose(x2, y))
 
     print('-'*50)
-
-    # Test converting images to and from fourier space
-    A = np.zeros((16,16))
-
-    for I in range(16):
-        for J in range(16):
-            if I > 7:
-                i = I-8
-            else:
-                i = I
-            if J > 7:
-                 j = J-8
-            else:
-                j = J
-            if (I<8) & (J>8):
-                A[I,J] = x2[i,j]
-            else:
-                A[I,J] = x1[i,j]
-    Adct = img_to_dct(A)
-    Arecov = dct_to_img(Adct, A.shape)
-    print(A)
-    print(Arecov)
-    assert(np.allclose(A, Arecov))
 
 
 def run_part_d3():
@@ -248,7 +212,11 @@ def run_part_d3():
     run_image('images/spiral.png')
 
     # And with noise:
-    # Adding a noise with variance of 10 (out of 255) is about 2.5%
+    run_image('images/arch.png', 50)
+    run_image('images/elephant.png', 50)
+    run_image('images/koala.png', 50)
+    run_image('images/spiral.png', 50)
+
     run_image('images/arch.png', 10)
     run_image('images/elephant.png', 10)
     run_image('images/koala.png', 10)
