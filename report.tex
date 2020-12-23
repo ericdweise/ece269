@@ -28,6 +28,14 @@ My project is hosted on GitHub:
 
 
 
+
+
+
+
+
+
+
+
 %%%%%%%%%%%%%%%%%%
 %%%   PART C   %%%
 %%%%%%%%%%%%%%%%%%
@@ -37,7 +45,7 @@ My project is hosted on GitHub:
 \section*{Noiseless Signal Recovery ({\it part c})}
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.75\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{plots/c-recov_N-20.png}
@@ -58,6 +66,18 @@ The Error rate is low for small sparsity, and reach a plateau close to 1.2.
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 %%%%%%%%%%%%%%%%%%%
 %%%   PART D1   %%%
 %%%%%%%%%%%%%%%%%%%
@@ -66,7 +86,7 @@ The Error rate is low for small sparsity, and reach a plateau close to 1.2.
 \section*{Noisy Signal Recovery With Known Sparsity ({\it Part d-i})}
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.75\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{plots/d1-recov_N-20_noise-0.05.png}
@@ -80,7 +100,7 @@ The Error rate is low for small sparsity, and reach a plateau close to 1.2.
 \end{figure}
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.75\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{plots/d1-recov_N-20_noise-1.png}
@@ -98,6 +118,18 @@ As we might predict, adding small amounts of noise changes the ESR and Normalize
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 %%%%%%%%%%%%%%%%%%%
 %%%   PART D2   %%%
 %%%%%%%%%%%%%%%%%%%
@@ -106,7 +138,7 @@ As we might predict, adding small amounts of noise changes the ESR and Normalize
 \section*{Noisy Signal Recovery ({\it part d-ii})}
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.75\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{plots/d2-recov_N-20_noise-0.05.png}
@@ -120,7 +152,7 @@ As we might predict, adding small amounts of noise changes the ESR and Normalize
 \end{figure}
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.75\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{plots/d2-recov_N-20_noise-1.png}
@@ -132,6 +164,18 @@ As we might predict, adding small amounts of noise changes the ESR and Normalize
         \includegraphics[width=0.25\textwidth]{plots/d2-error_N-100_noise-1.png}
         \caption{Noisy support set recovery {\bf variance=1}. Stop condition achieved when the 2-norm of residual is less than 0.001. Top row: The probability of Exact Support Recovery. Bottom row: Normalized error of recovered signal.}
 \end{figure}
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -169,7 +213,7 @@ These are the steps used in Compressive Sensing and Signal Reconstruction.
     \item Each sub image is transformed into frequency space using a Discrete Cosine Transform.
         The $64 \times 64$ DCT matrix forms $\Psi$.
     \item The transformed $8 \times 8$ subimage is converted into a vector $x \in \mathbb{R}^{1 \times 64}$
-        The order uses the zig-zag pattern demonstrated in {\it figure ****} to bias low frequency coefficients in Fourier space.
+        The order uses the zig-zag pattern demonstrated in {\it figure 6 to bias low frequency coefficients in Fourier space.
     \item The largest $s$ elements in $x$ are retained. The rest are set to zero. This sparse vector is denoted $x_s$
     \item {\bf Compressive Sensing}: Calculate $y = \Phi \cdot x_s$. ($y \in \mathbb{R}^M$)
     \item Perform OMP to recover $\hat{x} \in \mathbb{R}^{64}$.
@@ -181,7 +225,7 @@ These are the steps used in Compressive Sensing and Signal Reconstruction.
 In the above steps $y = \Phi \Psi x$ is the result of compressive sensing.
 This process is repeated for every $8 \times 8$ subimage.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.5\textwidth]{assets/zigzag.jpg}
@@ -201,7 +245,7 @@ At $s/N = 2/64$ we begin to see some texture, although finer details are not rec
 However, even at low sparsity levels, around 8, we can see more details being recovered.
 Notice the texture in the elephant's skin, the tree branches under the arch, and the hairs of the koala start to appear.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{images/arch.png}
@@ -210,7 +254,7 @@ Notice the texture in the elephant's skin, the tree branches under the arch, and
         \caption{The original image of the arch (left) recovered image with s=2 (center) and recovered image with s=8 (right)}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{images/elephant.png}
@@ -219,7 +263,7 @@ Notice the texture in the elephant's skin, the tree branches under the arch, and
         \caption{The original image of elephant (left) recovered image with s=2 (center) and recovered image with s=8 (right)}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{images/koala.png}
@@ -228,7 +272,7 @@ Notice the texture in the elephant's skin, the tree branches under the arch, and
         \caption{The original image of the koala (left) recovered image with s=2 (center) and recovered image with s=8 (right)}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{images/spiral.png}
@@ -239,7 +283,7 @@ Notice the texture in the elephant's skin, the tree branches under the arch, and
 
 
 
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.5\textwidth]{plots/d3-no-noise.png}
@@ -261,7 +305,7 @@ The mean for both experiments is zero.
 
 
 \subsubsection*{Variance=10}
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{images/koala_noise-10.png}
@@ -273,7 +317,7 @@ The mean for both experiments is zero.
 
 \newpage
 \subsubsection*{Variance=50}
-\begin{figure}[h]
+\begin{figure}[H]
     \captionsetup{width=.5\linewidth}
     \centering
         \includegraphics[width=0.25\textwidth]{images/koala_noise-50.png}

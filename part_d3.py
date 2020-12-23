@@ -117,12 +117,14 @@ def run_image(filepath, noise=None):
     label = filepath.replace('images/', '')
     label = label.replace('.png', '')
 
-    image = load_image(filepath)
+    original = load_image(filepath)
 
     if noise is not None:
         label = label + f'_noise-{noise}'
-        image, _ = add_noise(image, noise)
+        image, _ = add_noise(original, noise)
         save_image(image, 'images/' + label + '.png')
+    else:
+        image = original
 
     N = 64
     M = 30
@@ -154,7 +156,7 @@ def run_image(filepath, noise=None):
         img_recov = img_recov * 255
         img_recov = img_recov.astype('uint8')
 
-        psnr.append(peak_snr(image, img_recov))
+        psnr.append(peak_snr(original, img_recov))
 
     return Ss, psnr
 
@@ -206,8 +208,6 @@ def run_part_d3():
     ax.legend()
     plt.savefig(f'./plots/d3-no-noise.png')
     plt.close()
-
-    return
 
 
     # And with noise variance 50
