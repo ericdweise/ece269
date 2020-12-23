@@ -145,7 +145,7 @@ def save_data(M, S, ERR, ESR, part, N, sigma=None):
     plt.close()
 
 
-def omp(A, y, error_bound=0.01, stop_after=float('inf')):
+def omp(A, y, error_bound=0.001, stop_after=float('inf')):
     '''Find the OMP solution with index for the given signal.
 
     Args:
