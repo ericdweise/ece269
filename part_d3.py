@@ -126,11 +126,10 @@ def run_image(filepath, noise=None):
 
     N = 64
     M = 30
-    Ss = range(1,16)
+    Ss = [1,2,3,4,5,6,8,10,12]
 
     A = generate_random_matrix(M,N)
 
-    mse = []
     psnr = []
 
     for s in Ss:
@@ -155,29 +154,9 @@ def run_image(filepath, noise=None):
         img_recov = img_recov * 255
         img_recov = img_recov.astype('uint8')
 
-        mse.append(mean_squared_error(image, img_recov))
         psnr.append(peak_snr(image, img_recov))
 
-    fig = plt.figure()
-
-    ax1 = fig.add_subplot(1, 2, 1)
-    ax1.set_title('Mean Squared Error')
-    ax1.set_ylabel('MSE')
-    ax1.set_xlabel('Number of Measurements, s')
-    ax1.plot(Ss, mse, '-m')
-
-    ax2 = fig.add_subplot(1, 2, 2)
-    ax2.set_title('Peak Signal to Noise Ratio')
-    ax2.set_ylabel('PSNR (db)')
-    ax2.set_xlabel('Number of Measurements, s')
-    ax2.plot(Ss, psnr, '-c')
-
-    ax2.yaxis.set_label_position("right")
-    ax2.yaxis.tick_right()
-
-    plt.savefig(f'./plots/d3-{label}.png')
-
-    plt.close()
+    return Ss, psnr
 
 
 def test():
@@ -206,21 +185,71 @@ def test():
 
 
 def run_part_d3():
-    run_image('images/arch.png')
-    run_image('images/elephant.png')
-    run_image('images/koala.png')
-    run_image('images/spiral.png')
 
-    # And with noise:
-    run_image('images/arch.png', 50)
-    run_image('images/elephant.png', 50)
-    run_image('images/koala.png', 50)
-    run_image('images/spiral.png', 50)
+    # NO NOISE
+    fig = plt.figure()
+    ax = plt.axes()
 
-    run_image('images/arch.png', 10)
-    run_image('images/elephant.png', 10)
-    run_image('images/koala.png', 10)
-    run_image('images/spiral.png', 10)
+    ax.set_title('Image Recovery PSNR\nNo Noise')
+    ax.set_ylabel('PSNR (dB)')
+    ax.set_xlabel('Signal Sparsity, s')
+
+    s, psnr = run_image('images/arch.png')
+    ax.plot(s, psnr, '-m', label='arch')
+    s, psnr = run_image('images/elephant.png')
+    ax.plot(s, psnr, '-c', label='elephant')
+    s, psnr = run_image('images/koala.png')
+    ax.plot(s, psnr, '-b', label='koala')
+    s, psnr = run_image('images/spiral.png')
+    ax.plot(s, psnr, '-g', label='spiral')
+
+    ax.legend()
+    plt.savefig(f'./plots/d3-no-noise.png')
+    plt.close()
+
+    return
+
+
+    # And with noise variance 50
+    fig = plt.figure()
+    ax = plt.axes()
+
+    ax.set_title('Image Recovery PSNR\nNoise Variance: 50')
+    ax.set_ylabel('PSNR (dB)')
+    ax.set_xlabel('Signal Sparsity, s')
+
+    s, psnr = run_image('images/arch.png', 50)
+    ax.plot(s, psnr, '-m', label='arch')
+    s, psnr = run_image('images/elephant.png', 50)
+    ax.plot(s, psnr, '-c', label='elephant')
+    s, psnr = run_image('images/koala.png', 50)
+    ax.plot(s, psnr, '-b', label='koala')
+    s, psnr = run_image('images/spiral.png', 50)
+    ax.plot(s, psnr, '-g', label='spiral')
+
+    plt.savefig(f'./plots/d3-noise-50.png')
+    plt.close()
+
+
+    # And with noise variance 10
+    fig = plt.figure()
+    ax = plt.axes()
+
+    ax.set_title('Image Recovery PSNR\nNoise Variance: 10')
+    ax.set_ylabel('PSNR (dB)')
+    ax.set_xlabel('Signal Sparsity, s')
+
+    s, psnr = run_image('images/arch.png', 10)
+    ax.plot(s, psnr, '-m', label='arch')
+    s, psnr = run_image('images/elephant.png', 10)
+    ax.plot(s, psnr, '-c', label='elephant')
+    s, psnr = run_image('images/koala.png', 10)
+    ax.plot(s, psnr, '-b', label='koala')
+    s, psnr = run_image('images/spiral.png', 10)
+    ax.plot(s, psnr, '-g', label='spiral')
+
+    plt.savefig(f'./plots/d3-noise-10.png')
+    plt.close()
 
 
 if __name__ == '__main__':
